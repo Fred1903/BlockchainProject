@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accès Page Protégée</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.0/web3.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            text-align: center;
+        }
+        button { 
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .hidden { 
+            display: none; 
+        }
+        #protectedContent {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #successMessage {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Page avec Accès Contrôlé</h1>
+    
+    <!-- Étape 1: Connexion MetaMask -->
+    <div id="connectDiv">
+        <button onclick="connectMetaMask()">1. Connecter avec MetaMask</button>
+    </div>
+
+    <!-- Étape 2: Obtenir l'accès -->
+    <div id="accessDiv" class="hidden">
+        <p>Adresse connectée: <span id="userAddress"></span></p>
+        <button onclick="getAccess()">2. Obtenir l'accès (0 ETH)</button>
+    </div>
+
+    <!-- Message de succès -->
+    <p id="successMessage" class="hidden">Accès accordé ! Vous avez maintenant accès au contenu protégé.</p>
+
+    <!-- Contenu protégé -->
+    <div id="protectedContent" class="hidden">
+        <h2>Contenu Protégé</h2>
+        <p>Félicitations ! Vous avez accès au contenu protégé.</p>
+        <!-- Ajoutez ici le contenu que vous voulez protéger -->
+    </div>
+
+    <script>
+        let web3;
+        let contract;
+        let userAccount;
+        
+        const contractAddress = '0xf8e81D47203A594245E36C48e151709F0C19fBe8';
+        const contractABI = [
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    }
+                ],
+                "name": "AccessGranted",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "getAccess",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "ACCESS_PRICE",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "user",
+                        "type": "address"
+                    }
+                ],
+                "name": "checkAccess",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "name": "hasAccess",
+                "outputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "",
+                        "type": "bool"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        async function connectMetaMask() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_requestAccounts' 
+                    });
+                    userAccount = accounts[0];
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(contractABI, contractAddress);
+                    
+                    document.getElementById('userAddress').textContent = userAccount;
+                    document.getElementById('connectDiv').classList.add('hidden');
+                    document.getElementById('accessDiv').classList.remove('hidden');
+                    
+                    // Vérifier si l'utilisateur a déjà l'accès
+                    checkAccess();
+                    
+                } catch (error) {
+                    alert('Erreur de connexion à MetaMask');
+                    console.error(error);
+                }
+            } else {
+                alert('MetaMask n\'est pas installé');
+            }
+        }
+
+        async function getAccess() {
+            try {
+                await contract.methods.getAccess().send({
+                    from: userAccount,
+                    value: web3.utils.toWei('0', 'ether')  // 0 ETH pour la démo
+                });
+                
+                alert('Accès accordé !');
+                showProtectedContent();
+
+                // Afficher le message de succès sur la page
+                document.getElementById('successMessage').classList.remove('hidden');
+                
+            } catch (error) {
+                alert('Erreur lors de l\'obtention de l\'accès');
+                console.error(error);
+            }
+        }
+
+        async function checkAccess() {
+            try {
+                const hasAccess = await contract.methods.checkAccess(userAccount).call();
+                if (hasAccess) {
+                    showProtectedContent();
+                    document.getElementById('successMessage').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function showProtectedContent() {
+            document.getElementById('accessDiv').classList.add('hidden');
+            document.getElementById('protectedContent').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
